@@ -1,121 +1,304 @@
 #include <iostream>
+#include <cstring>
 #include <queue>
+
+using llu = long long unsigned int;
+
+class TString {
+    public:
+        int Size;
+        int Capacity;
+        char* Arr;
+
+        void Reallocate(int);
+
+        TString();
+        TString(int);
+        TString(const char*);
+
+        void PushBack(const char);
+        void PopBack();
+        void Erase(int);
+        void Clear();
+
+        void Print(std::ostream&);
+
+        int GetSize();
+        int GetCapacity();
+
+        char operator[] (int) const;
+        TString& operator = (const TString&);
+
+        bool operator < (const TString&) const;
+        bool operator > (const TString&) const;
+        bool operator == (const TString&) const;
+        bool operator != (const TString&) const;
+
+        friend std::ostream& operator << (std::ostream&, TString&);
+
+        ~TString() = default;
+};
+
+void TString::Reallocate(int newCapacity) {
+    if (Arr == nullptr) {
+        return;
+    }
+
+    char* temp = new char[Size];
+
+    for (int i = 0; i < Size; ++i) {
+        temp[i] = Arr[i];
+    }
+
+    delete[] Arr;
+    Arr = new char[newCapacity];
+
+    for (int i = 0; i < Size; ++i) {
+        Arr[i] = temp[i];
+    }
+
+    Capacity = newCapacity;
+    delete[] temp;
+}
+
+TString::TString() {
+    Size = 0;
+    Capacity = 2;
+    Arr = new char[Capacity];
+}
+
+TString::TString(int size) {
+    Size = size;
+
+    if (Size > 0) {
+        Capacity = Size * 2;
+    } else {
+        Capacity = 2;
+    }
+
+    Arr = new char[Capacity];
+}
+
+TString::TString(const char* str) {
+    Size = strlen(str);
+    Capacity = Size + 1;
+    Arr = new char[Capacity];
+    strcpy(Arr, str);
+}
+
+void TString::PushBack(const char elem) {
+    if (Size >= Capacity) {
+        this->Reallocate(Capacity * 2);
+    }
+
+    Arr[Size++] = elem;
+}
+
+void TString::PopBack() {
+    if (!Size) {
+        return;
+    }
+
+    Size--;
+}
+
+void TString::Erase(int index) {
+    if (index >= Size) {
+        return;
+    }
+
+    for (int i = index + 1; i < Size; ++i) {
+        Arr[i - 1] = Arr[i];
+    }
+
+    Size--;
+}
+
+void TString::Clear() {
+    Size = 0;
+}
+
+char TString::operator[] (int index) const {
+    if (index >= Size) {
+        throw std::logic_error("Too big index");
+    }
+
+    return Arr[index];
+}
+
+TString& TString::operator = (const TString& other) {
+    delete[] Arr;
+    Size = other.Size;
+    Capacity = other.Capacity;
+    Arr = new char[Capacity];
+
+    for (int i = 0; i < Size; ++i) {
+        Arr[i] = other[i];
+    }
+
+    return *this;
+}
+
+int TString::GetSize() {
+    return Size;
+}
+
+int TString::GetCapacity() {
+    return Capacity;
+}
+
+bool TString::operator == (const TString& other) const {
+    return strcmp(Arr, other.Arr) == 0;
+}
+
+bool TString::operator != (const TString& other) const {
+    return !(*this == other);
+}
+
+bool TString::operator < (const TString& other) const {
+    return strcmp(Arr, other.Arr) < 0;
+}
+
+bool TString::operator > (const TString& other) const {
+    return strcmp(Arr, other.Arr) > 0;
+}
+
+void TString::Print(std::ostream& out) {
+    for (int i = 0; i < Size; ++i) {
+        std::cout << Arr[i];
+    }
+}
+
+std::ostream& operator << (std::ostream& out, TString& str) {
+    str.Print(out);
+    return out;
+}
+
+/*TString::~TString() {
+    Size = 0;
+    Capacity = 0;
+    delete[] Arr;
+    Arr = nullptr;
+}*/
 
 //при удалении и добавлении добавь обновление значения
 
-struct node {
-    int key;
-    bool color;
-    node* left;
-    node* right;
-    node* parent;
+struct TNode {
+    TString Key;
+    llu Value;
+    bool Color;
+    TNode* Left;
+    TNode* Right;
+    TNode* Parent;
 
-    node(int _key, bool _color, node* _left, node* _right, node* _parent) {
-        key = _key;
-        color = _color;
-        left = _left;
-        right = _right;
-        parent = _parent;
+    TNode(TString key, llu value, bool color, TNode* left, TNode* right, TNode* parent) {
+        Key = key;
+        Value = value;
+        Color = color;
+        Left = left;
+        Right = right;
+        Parent = parent;
     }
 
-    ~node() = default;
+    ~TNode() = default;
 };
 
-node* root = nullptr;
-node* nil = nullptr;
+TNode* root = nullptr;
+TNode* nil = nullptr;
 
-void DeleteBinaryTree(node* r) {
+void DeleteBinaryTree(TNode* r) {
     if (r == nil) {
         return;
     }
 
-    DeleteBinaryTree(r->left);
-    DeleteBinaryTree(r->right);
+    DeleteBinaryTree(r->Left);
+    DeleteBinaryTree(r->Right);
 
+    delete[] r->Key.Arr;
     delete r;
 }
 
-node* TreeMinimum(node* x) {
-    node* temp = x;
+TNode* TreeMinimum(TNode* x) {
+    TNode* temp = x;
 
-    while (temp->left != nil) {
-        temp = temp->left;
+    while (temp->Left != nil) {
+        temp = temp->Left;
     }
 
     return temp;
 }
 
-node* TreeSuccessor(node* x) {
-    if (x->right != nil) {
-        return TreeMinimum(x->right);
+TNode* TreeSuccessor(TNode* x) {
+    if (x->Right != nil) {
+        return TreeMinimum(x->Right);
     }
 
-    node* y = x->parent;
-    node* temp = x;
+    TNode* y = x->Parent;
+    TNode* temp = x;
 
-    while (y != nil && temp == y->right) {
+    while (y != nil && temp == y->Right) {
         temp = y;
-        y = y->parent;
+        y = y->Parent;
     }
 
     return y;
 }
 
-void leftRotate(node* x) {
-    node* y = x->right;
-    x->right = y->left;
+void LeftRotate(TNode* x) {
+    TNode* y = x->Right;
+    x->Right = y->Left;
 
-    if (y->left != nil) {
-        y->left->parent = x;
+    if (y->Left != nil) {
+        y->Left->Parent = x;
     }
 
-    y->parent = x->parent;
+    y->Parent = x->Parent;
 
-    if (x->parent == nil) {
+    if (x->Parent == nil) {
         root = y;
-    } else if (x == x->parent->left) {
-        x->parent->left = y;
+    } else if (x == x->Parent->Left) {
+        x->Parent->Left = y;
     } else {
-        x->parent->right = y;
+        x->Parent->Right = y;
     }
 
-    y->left = x;
-    x->parent = y;
+    y->Left = x;
+    x->Parent = y;
 }
 
-void rightRotate(node* y) {
-    node* x = y->left;
-    y->left = x->right;
+void RightRotate(TNode* y) {
+    TNode* x = y->Left;
+    y->Left = x->Right;
 
-    if (x->right != nil) {
-        x->right->parent = y;
+    if (x->Right != nil) {
+        x->Right->Parent = y;
     }
 
-    x->parent = y->parent;
+    x->Parent = y->Parent;
 
-    if (y->parent == nil) {
+    if (y->Parent == nil) {
         root = x;
-    } else if (y == y->parent->left) {
-        y->parent->left = x;
+    } else if (y == y->Parent->Left) {
+        y->Parent->Left = x;
     } else {
-        y->parent->right = x;
+        y->Parent->Right = x;
     }
 
-    x->right = y;
-    y->parent = x;
+    x->Right = y;
+    y->Parent = x;
 }
 
-node* rbFind(int key) {
-    node* y = nil;
-    node* x = root;
+TNode* rbFind(TString& key) {
+    TNode* y = nil;
+    TNode* x = root;
 
     while (x != nil) {
         y = x;
 
-        if (key < x->key) {
-            x = x->left;
-        } else if (key > x->key) {
-            x = x->right;
+        if (key < x->Key) {
+            x = x->Left;
+        } else if (key > x->Key) {
+            x = x->Right;
         } else {
             y = x;
             x = nil;
@@ -125,231 +308,244 @@ node* rbFind(int key) {
     return y;
 }
 
-void rbInsertFixUp(node* z) {
-    while (z->parent->color == false) {
-        if (z->parent == z->parent->parent->left) {
+void RbInsertFixUp(TNode* z) {
+    while (z->Parent->Color == false) {
+        if (z->Parent == z->Parent->Parent->Left) {
 
-            node* y = z->parent->parent->right;
+            TNode* y = z->Parent->Parent->Right;
             
-            if (y->color == false) {
+            if (y->Color == false) {
 
-                z->parent->color = true;
-                y->color = true;
-                z->parent->parent->color = false;
-                z = z->parent->parent;
-
-            } else if (z == z->parent->right) {
-
-                z = z->parent;
-                leftRotate(z);
+                z->Parent->Color = true;
+                y->Color = true;
+                z->Parent->Parent->Color = false;
+                z = z->Parent->Parent;
 
             } else {
 
-                z->parent->color = true;
-                z->parent->parent->color = false;
-                rightRotate(z->parent->parent);
+                if (z == z->Parent->Right) {
+                    z = z->Parent;
+                    LeftRotate(z);
+                }
+
+                z->Parent->Color = true;
+                z->Parent->Parent->Color = false;
+                RightRotate(z->Parent->Parent);
 
             }
 
         } else {
-            node* y = z->parent->parent->left;
+            TNode* y = z->Parent->Parent->Left;
 
-            if (y->color == false) {
+            if (y->Color == false) {
                 
-                z->parent->color = true;
-                y->color = true;
-                z->parent->parent->color = false;
-                z = z->parent->parent;
-
-            } else if (z == z->parent->left) {
-
-                z = z->parent;
-                rightRotate(z);
+                z->Parent->Color = true;
+                y->Color = true;
+                z->Parent->Parent->Color = false;
+                z = z->Parent->Parent;
 
             } else {
 
-                z->parent->color = true;
-                z->parent->parent->color = false;
-                leftRotate(z->parent->parent);
+                if (z == z->Parent->Left) {
+                    z = z->Parent;
+                    RightRotate(z);
+                }
+
+                z->Parent->Color = true;
+                z->Parent->Parent->Color = false;
+                LeftRotate(z->Parent->Parent);
 
             }
         }
     }
 
-    root->color = true;
+    root->Color = true;
 }
 
-void rbInsert(node* z, node* y) {
-    z->parent = y;
+void RbInsert(TNode* z, TNode* y) {
+    z->Parent = y;
 
     if (y == nil) {
         root = z;
-    } else if (z->key < y->key) {
-        y->left = z;
+    } else if (z->Key < y->Key) {
+        y->Left = z;
     } else {
-        y->right = z;
+        y->Right = z;
     }
 
-    z->left = nil;
-    z->right = nil;
-    z->color = false;
+    z->Left = nil;
+    z->Right = nil;
+    z->Color = false;
 
-    rbInsertFixUp(z);
+    RbInsertFixUp(z);
 }
 
-void rbDeleteFixUp(node* x) {
-    while (x != root && x->color == true) {
-        if (x == x->parent->left) {
+void RbDeleteFixUp(TNode* x) {
+    while (x != root && x->Color == true) {
+        if (x == x->Parent->Left) {
 
-            node* w = x->parent->right;
+            TNode* w = x->Parent->Right;
 
-            if (w->color == false) {
+            if (w->Color == false) {
 
-                w->color = true;
-                x->parent->color = false;
-                leftRotate(x->parent);
-                w = x->parent->right;
+                w->Color = true;
+                x->Parent->Color = false;
+                LeftRotate(x->Parent);
+                w = x->Parent->Right;
 
-            } else if (w->left->color == true && w->right->color == true) {
+            }
 
-                w->color = false;
-                x = x->parent;
-
-            } else if (w->right->color == true) {
-
-                w->left->color = true;
-                w->color = false;
-                rightRotate(w);
-                w = x->parent->right;
+            if (w->Left->Color == true && w->Right->Color == true) {
+                
+                w->Color = false;
+                x = x->Parent;
 
             } else {
 
-                w->color = x->parent->color;
-                x->parent->color = true;
-                w->right->color = true;
-                leftRotate(x->parent);
+                if (w->Right->Color == true) {
+
+                    w->Left->Color = true;
+                    w->Color = false;
+                    RightRotate(w);
+                    w = x->Parent->Right;
+
+                }
+
+                w->Color = x->Parent->Color;
+                x->Parent->Color = true;
+                w->Right->Color = true;
+                LeftRotate(x->Parent);
                 x = root;
 
-            }
+            } 
 
         } else {
 
-            node* w = x->parent->left;
+            TNode* w = x->Parent->Left;
 
-            if (w->color == false) {
+            if (w->Color == false) {
 
-                w->color = true;
-                x->parent->color = false;
-                rightRotate(x->parent);
-                w = x->parent->left;
-
-            } else if (w->left->color == true && w->right->color == true) {
-                
-                w->color = false;
-                x = x->parent;
-
-            } else if (w->left->color == true) {
-
-                w->right->color = true;
-                w->color = false;
-                leftRotate(w);
-                w = x->parent->left;
-
-            } else {
-
-                w->color = x->parent->color;
-                x->parent->color = true;
-                w->left->color = true;
-                rightRotate(x->parent);
-                x = root;
+                w->Color = true;
+                x->Parent->Color = false;
+                RightRotate(x->Parent);
+                w = x->Parent->Left;
 
             }
 
+            if (w->Left->Color == true && w->Right->Color == true) {
+
+                x->Color = false;
+                x = x->Parent;
+
+            } else {
+
+                if (w->Left->Color == true) {
+
+                    w->Right->Color = true;
+                    w->Color = false;
+                    LeftRotate(w);
+                    w = x->Parent->Left;
+
+                }
+
+                w->Color = x->Parent->Color;
+                x->Parent->Color = true;
+                w->Left->Color = true;
+                RightRotate(x->Parent);
+                x = root;
+
+            }
         }
     }
 
-    x->color = true;
+    x->Color = true;
 }
 
-void rbDelete(node* z) {
-    node* y;
-    node* x;
+void RbDelete(TNode* z) {
+    TNode* y;
+    TNode* x;
     
-    if (z->left == nil || z->right == nil) {
+    if (z->Left == nil || z->Right == nil) {
         y = z;
     } else {
         y = TreeSuccessor(z);
     }
 
-    if (y->left != nil) {
-        x = y->left;
+    if (y->Left != nil) {
+        x = y->Left;
     } else {
-        x = y->right;
+        x = y->Right;
     }
 
-    x->parent = y->parent;
+    x->Parent = y->Parent;
 
-    if (y->parent == nil) {
+    if (y->Parent == nil) {
         root = x;
-    } else if (y == y->parent->left) {
-        y->parent->left = x;
+    } else if (y == y->Parent->Left) {
+        y->Parent->Left = x;
     } else {
-        y->parent->right = x;
+        y->Parent->Right = x;
     }
 
     if (y != z) {
-        z->key = y->key;
+        z->Key = y->Key;
+        z->Value = y->Value;
     }
 
-    if (y->color == true) {
-        rbDeleteFixUp(x);
+    if (y->Color == true) {
+        RbDeleteFixUp(x);
     }
 
     delete y;
 }
 
 void bfs() {
-    std::queue<node*> q;
+    std::queue<TNode*> q;
 
     if (root != nil) {
         q.push(root);
     }
 
-    node* last;
+    TNode* last;
+    TString helper;
 
     while(!q.empty()) {
         last = q.back();
 
         while (q.front() != last) {
-            std::cout << q.front()->key << '(' << (q.front()->parent ? q.front()->parent->key : -1) << ')' << q.front()->color << ' ';
+            helper = q.front()->Parent ? q.front()->Parent->Key : "-1";
+            std::cout << q.front()->Key << '(' << helper << ')' << q.front()->Color << ' ';
 
-            if (q.front()->left != nil) {
-                q.push(q.front()->left);
+            if (q.front()->Left != nil) {
+                q.push(q.front()->Left);
             }
 
-            if (q.front()->right != nil) {
-                q.push(q.front()->right);
+            if (q.front()->Right != nil) {
+                q.push(q.front()->Right);
             }
 
             q.pop();
         }
 
-        std::cout << last->key << '(' << (q.front()->parent ? q.front()->parent->key : -1) << ")" << q.front()->color << std::endl;
+        helper = q.front()->Parent ? q.front()->Parent->Key : "-1";
+        std::cout << last->Key << '(' << helper << ')' << q.front()->Color << std::endl;
 
-        if (last->left != nil) {
-            q.push(last->left);
+        if (last->Left != nil) {
+            q.push(last->Left);
         }
 
-        if (last->right != nil) {
-            q.push(last->right);
+        if (last->Right != nil) {
+            q.push(last->Right);
         }
 
         q.pop();
     }
+
+    delete[] helper.Arr;
 }
 
 int main() {
-    nil = new node(-1, true, nullptr, nullptr, nullptr);
+    /*nil = new node(-1, true, nullptr, nullptr, nullptr);
     root = nil;
 
     int val;
@@ -375,27 +571,58 @@ int main() {
     bfs();
     std::cout << std::endl;
 
-    rbDelete(root->left);
-
+    rbDelete(rbFind(384));
     bfs();
     std::cout << std::endl;
-
-    rbDelete(root);
-
-    bfs();
-    std::cout << std::endl;
-
-    rbDelete(root->right);
-
-    bfs();
-    std::cout << std::endl;
-
-    node* z = new node(4, false, nil, nil, nil);
-    rbInsert(z, rbFind(4));
-    bfs();
 
     DeleteBinaryTree(root);
 
+    delete nil;*/
+
+    TString bebra("-1");
+
+    nil = new TNode(bebra, -1, true, nullptr, nullptr, nullptr);
+    root = nil;
+
+    FILE* file;
+    llu val;
+    char str[256];
+    //TNode* z;
+
+    file = fopen("in.txt", "r");
+
+
+    for (int i = 0; i < 10; ++i) {
+        fscanf(file, "%s %llu", str, &val);
+
+        //printf("%s %llu\n", str, val);
+
+        TString myStr(str);
+        //std::cout << myStr << " " << val << std::endl;
+
+        if (root == nil) {
+            root = new TNode(myStr, val, true, nil, nil, nil);
+        } else {
+
+            if (rbFind(myStr) && rbFind(myStr)->Key == myStr) {
+                std::cout << "Already exist" << std::endl;
+            } else {
+                //z = new TNode(myStr, val, false, nil, nil, nil);
+                RbInsert(new TNode(myStr, val, false, nil, nil, nil), rbFind(myStr));
+            }
+
+        }
+
+        delete[] myStr.Arr;
+    }
+    bfs();
+
+    fclose(file);
+
+    DeleteBinaryTree(root);
+
+    delete[] bebra.Arr;
+    delete[] nil->Key.Arr;
     delete nil;
 
     return 0;
