@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cstring>
+#include <fstream>
+#include <cctype>
 #include <queue>
 
 using llu = long long unsigned int;
@@ -21,12 +23,13 @@ class TString {
         void Erase(int);
         void Clear();
 
+        void ToLower();
         void Print(std::ostream&);
 
         int GetSize();
         int GetCapacity();
 
-        char operator[] (int) const;
+        char& operator[] (int) const;
         TString& operator = (const TString&);
 
         bool operator < (const TString&) const;
@@ -36,7 +39,7 @@ class TString {
 
         friend std::ostream& operator << (std::ostream&, TString&);
 
-        ~TString() = default;
+        ~TString();
 };
 
 void TString::Reallocate(int newCapacity) {
@@ -44,14 +47,26 @@ void TString::Reallocate(int newCapacity) {
         return;
     }
 
-    char* temp = new char[Size];
+    char* temp;
+    try {
+        temp = new char[Size];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
+    }
 
     for (int i = 0; i < Size; ++i) {
         temp[i] = Arr[i];
     }
 
     delete[] Arr;
-    Arr = new char[newCapacity];
+
+    try {
+        Arr = new char[newCapacity];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
+    }
 
     for (int i = 0; i < Size; ++i) {
         Arr[i] = temp[i];
@@ -64,25 +79,43 @@ void TString::Reallocate(int newCapacity) {
 TString::TString() {
     Size = 0;
     Capacity = 2;
-    Arr = new char[Capacity];
+
+    try {
+        Arr = new char[Capacity];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
+    }
 }
 
 TString::TString(int size) {
     Size = size;
 
     if (Size > 0) {
-        Capacity = Size * 2;
+        Capacity = Size + 1;
     } else {
         Capacity = 2;
     }
-
-    Arr = new char[Capacity];
+    
+    try {
+        Arr = new char[Capacity];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
+    }
 }
 
 TString::TString(const char* str) {
     Size = strlen(str);
     Capacity = Size + 1;
-    Arr = new char[Capacity];
+
+    try {
+        Arr = new char[Capacity];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
+    }
+
     strcpy(Arr, str);
 }
 
@@ -118,7 +151,7 @@ void TString::Clear() {
     Size = 0;
 }
 
-char TString::operator[] (int index) const {
+char& TString::operator[] (int index) const {
     if (index >= Size) {
         throw std::logic_error("Too big index");
     }
@@ -130,11 +163,15 @@ TString& TString::operator = (const TString& other) {
     delete[] Arr;
     Size = other.Size;
     Capacity = other.Capacity;
-    Arr = new char[Capacity];
 
-    for (int i = 0; i < Size; ++i) {
-        Arr[i] = other[i];
+    try {
+        Arr = new char[Capacity];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
     }
+
+    strcpy(Arr, other.Arr);
 
     return *this;
 }
@@ -169,19 +206,23 @@ void TString::Print(std::ostream& out) {
     }
 }
 
+void TString::ToLower() {
+    for (int i = 0; i < Size; ++i) {
+        Arr[i] = tolower(Arr[i]);
+    }
+}
+
 std::ostream& operator << (std::ostream& out, TString& str) {
     str.Print(out);
     return out;
 }
 
-/*TString::~TString() {
+TString::~TString() {
     Size = 0;
     Capacity = 0;
     delete[] Arr;
     Arr = nullptr;
-}*/
-
-//при удалении и добавлении добавь обновление значения
+}
 
 struct TNode {
     TString Key;
@@ -190,14 +231,16 @@ struct TNode {
     TNode* Left;
     TNode* Right;
     TNode* Parent;
+    int Id;
 
-    TNode(TString key, llu value, bool color, TNode* left, TNode* right, TNode* parent) {
+    TNode(TString& key, llu value, bool color, TNode* left, TNode* right, TNode* parent) {
         Key = key;
         Value = value;
         Color = color;
         Left = left;
         Right = right;
         Parent = parent;
+        Id = -1;
     }
 
     ~TNode() = default;
@@ -214,7 +257,6 @@ void DeleteBinaryTree(TNode* r) {
     DeleteBinaryTree(r->Left);
     DeleteBinaryTree(r->Right);
 
-    delete[] r->Key.Arr;
     delete r;
 }
 
@@ -288,7 +330,7 @@ void RightRotate(TNode* y) {
     y->Parent = x;
 }
 
-TNode* rbFind(TString& key) {
+TNode* RbFind(TString& key) {
     TNode* y = nil;
     TNode* x = root;
 
@@ -300,8 +342,7 @@ TNode* rbFind(TString& key) {
         } else if (key > x->Key) {
             x = x->Right;
         } else {
-            y = x;
-            x = nil;
+            break;
         }
     }
 
@@ -499,6 +540,128 @@ void RbDelete(TNode* z) {
     delete y;
 }
 
+void EnumNodes(TNode* root, TNode** arr, int* index) {
+    root->Id = *index;
+    arr[*index] = root;
+    ++(*index);
+
+    if (root->Left != nil) {
+        EnumNodes(root->Left, arr, index);
+    }
+
+    if (root->Right != nil) {
+        EnumNodes(root->Right, arr, index);
+    }
+}
+
+void Save(std::ofstream& file, int* treeSize) {
+    file.write((const char*)treeSize, sizeof(int));
+
+    TNode** nodes;
+
+    try {
+        nodes = new TNode*[*treeSize + 1];
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        return;
+    }
+
+    nodes[0] = nil;
+    nil->Id = 0;
+    int index = 1;
+
+    EnumNodes(root, nodes, &index);
+
+    TNode* node;
+    for (int i = 1; i < *treeSize + 1; ++i) {
+        node = nodes[i];
+        file.write((const char*)&(node->Key.Size), sizeof(int));
+        file.write(node->Key.Arr, sizeof(char) * node->Key.Size);
+        file.write((const char*)&(node->Value), sizeof(llu));
+        file.write((const char*)&(node->Color), sizeof(bool));
+        file.write((const char*)&(node->Parent->Id), sizeof(int));
+        file.write((const char*)&(node->Left->Id), sizeof(int));
+        file.write((const char*)&(node->Right->Id), sizeof(int));
+    }
+
+    delete[] nodes;
+}
+
+void Load(std::ifstream& file, int* treeSize) {
+    int size;
+    file.read((char*)&size, sizeof(int));
+
+    *treeSize = size;
+
+    if (!size) {
+        return;
+    }
+
+    TNode** nodes;
+
+    try {
+        nodes = new TNode*[size + 1];
+    } catch (std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        return;
+    }
+
+    nodes[0] = nil;
+    nil->Id = 0;
+    TString myStr("-1");
+
+    for (int i = 1; i < size + 1; ++i) {
+        nodes[i] = new TNode(myStr, -1, false, nil, nil, nil);
+    }
+
+    char* str;
+    llu value;
+    bool color;
+    int parentId, leftId, rightId, strSize;
+
+
+    for (int i = 1; i < size + 1; ++i) {
+        if (i == 1) {
+            root = nodes[i];
+        }
+
+        file.read((char*)&(strSize), sizeof(int));
+
+        if (strSize) {
+            try {
+                str = new char[strSize + 1];
+            } catch (const std::bad_alloc& ex) {
+                std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+                return;
+            }
+
+            str[strSize] = '\0';
+        }
+
+        file.read(str, sizeof(char)*strSize);
+        file.read((char*)&(value), sizeof(llu));
+        file.read((char*)&(color), sizeof(bool));
+        file.read((char*)&(parentId), sizeof(int));
+        file.read((char*)&(leftId), sizeof(int));
+        file.read((char*)&(rightId), sizeof(int));
+
+        TString helper(str);
+
+        nodes[i]->Key = helper;
+        nodes[i]->Color = color;
+        nodes[i]->Value = value;
+        nodes[i]->Parent = nodes[parentId];
+        nodes[i]->Left = nodes[leftId];
+        nodes[i]->Right = nodes[rightId];
+
+        delete[] str;
+    }
+
+    delete[] nodes;
+
+    return;
+}
+
 void bfs() {
     std::queue<TNode*> q;
 
@@ -507,14 +670,21 @@ void bfs() {
     }
 
     TNode* last;
-    TString helper;
 
     while(!q.empty()) {
         last = q.back();
 
         while (q.front() != last) {
-            helper = q.front()->Parent ? q.front()->Parent->Key : "-1";
-            std::cout << q.front()->Key << '(' << helper << ')' << q.front()->Color << ' ';
+            std::cout << q.front()->Key;
+
+            if (q.front()->Parent != nil) {
+                std::cout << '(' << q.front()->Parent->Key << ')';
+            } else {
+                std::cout << "(-1)";
+            }
+
+            std::cout << q.front()->Color << ' ';
+
 
             if (q.front()->Left != nil) {
                 q.push(q.front()->Left);
@@ -527,8 +697,15 @@ void bfs() {
             q.pop();
         }
 
-        helper = q.front()->Parent ? q.front()->Parent->Key : "-1";
-        std::cout << last->Key << '(' << helper << ')' << q.front()->Color << std::endl;
+        std::cout << last->Key;
+
+        if (last->Parent != nil) {
+            std::cout << '(' << last->Parent->Key << ')';
+        } else {
+            std::cout << "(-1)";
+        }
+
+        std::cout << last->Color << std::endl;
 
         if (last->Left != nil) {
             q.push(last->Left);
@@ -540,89 +717,126 @@ void bfs() {
 
         q.pop();
     }
-
-    delete[] helper.Arr;
 }
 
 int main() {
-    /*nil = new node(-1, true, nullptr, nullptr, nullptr);
-    root = nil;
+    TString nilStr("-1");
+    int treeSize = 0;
 
-    int val;
-    node* temp;
-
-    for (int i = 0; i < 9; ++i) {
-        std::cin >> val;
-
-        if (root == nil) {
-            root = new node(val, true, nil, nil, nil);
-        } else {
-            temp = rbFind(val);
-
-            if (temp && temp->key == val) {
-                std::cout << "Already exist " << temp->key << std::endl;
-            } else {
-                node* z = new node(val, false, nil, nil, nil);
-                rbInsert(z, temp);
-            }
-        }
+    try {
+        nil = new TNode(nilStr, -1, true, nullptr, nullptr, nullptr);
+    } catch (const std::bad_alloc& ex) {
+        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+        exit(EXIT_SUCCESS);
     }
 
-    bfs();
-    std::cout << std::endl;
-
-    rbDelete(rbFind(384));
-    bfs();
-    std::cout << std::endl;
-
-    DeleteBinaryTree(root);
-
-    delete nil;*/
-
-    TString bebra("-1");
-
-    nil = new TNode(bebra, -1, true, nullptr, nullptr, nullptr);
     root = nil;
 
-    FILE* file;
+    TNode* temp;
+    TNode* newNode;
     llu val;
     char str[256];
-    //TNode* z;
+    TString myStr;
 
-    file = fopen("in.txt", "r");
+    std::ofstream out;
+    std::ifstream in;
 
+    while (std::cin  >> str) {
+        switch (str[0]) {
+            case '+':
+                std::cin >> str >> val;
+                myStr = str;
+                myStr.ToLower();
 
-    for (int i = 0; i < 10; ++i) {
-        fscanf(file, "%s %llu", str, &val);
+                if (root == nil) {
+                    try {
+                        root = new TNode(myStr, val, true, nil, nil, nil);
+                    } catch (const std::bad_alloc& ex) {
+                        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+                        exit(EXIT_SUCCESS);
+                    }
 
-        //printf("%s %llu\n", str, val);
+                    ++treeSize;
 
-        TString myStr(str);
-        //std::cout << myStr << " " << val << std::endl;
+                    std::cout << "OK" << std::endl;
+                    break;
+                }
 
-        if (root == nil) {
-            root = new TNode(myStr, val, true, nil, nil, nil);
-        } else {
+                temp = RbFind(myStr);
+                
+                if (temp->Key == myStr) {
+                    std::cout << "Exist" << std::endl;
+                } else {
+                    try {
+                        newNode = new TNode(myStr, val, false, nil, nil, nil);
+                    } catch (const std::bad_alloc& ex) {
+                        std::cout << "ERROR: fail to allocate the requested storage space" << std::endl;
+                        exit(EXIT_SUCCESS);
+                    }
 
-            if (rbFind(myStr) && rbFind(myStr)->Key == myStr) {
-                std::cout << "Already exist" << std::endl;
-            } else {
-                //z = new TNode(myStr, val, false, nil, nil, nil);
-                RbInsert(new TNode(myStr, val, false, nil, nil, nil), rbFind(myStr));
-            }
+                    RbInsert(newNode, temp);
+                    ++treeSize;
+                    std::cout << "OK" << std::endl;
+                }
+                break;
+            case '-':
+                std::cin >> str;
+                myStr = str;
+                myStr.ToLower();
+                temp = RbFind(myStr);
 
+                if (root == nil || temp->Key != myStr) {
+                    std::cout << "NoSuchWord" << std::endl;
+                } else {
+                    RbDelete(temp);
+                    --treeSize;
+                    std::cout << "OK" << std::endl;
+                }
+                break;
+            case '!':
+                std::cin >> str;
+
+                if (!strcmp(str, "Save")) {
+                    std::cin >> str;
+                    out.open(str, std::ios::out | std::ios::binary | std::ios::trunc);
+
+                    Save(out, &treeSize);
+                    std::cout << "OK" << std::endl;
+                    out.close();
+
+                } else {
+                    std::cin >> str;
+                    in.open(str, std::ios::in | std::ios::binary);
+
+                    DeleteBinaryTree(root);
+                    root = nil;
+                    treeSize = 0;
+
+                    Load(in, &treeSize);
+
+                    std::cout << "OK" << std::endl;
+                    in.close();
+                }
+
+                break;
+            default:
+                myStr = str;
+                myStr.ToLower();
+                temp = RbFind(myStr);
+
+                if (root == nil || temp->Key != myStr) {
+                    std::cout << "NoSuchWord" << std::endl;
+                } else {
+                    std::cout << "OK: " << temp->Value << std::endl;
+                }
+                break;
         }
-
-        delete[] myStr.Arr;
     }
-    bfs();
 
-    fclose(file);
+    //bfs();
 
     DeleteBinaryTree(root);
 
-    delete[] bebra.Arr;
-    delete[] nil->Key.Arr;
     delete nil;
 
     return 0;
