@@ -1,3 +1,5 @@
 a.out
 in.txt
-out.txt
+gmon.out
+test.cpp
+etalon.cpp
